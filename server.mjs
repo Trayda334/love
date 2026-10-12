@@ -487,11 +487,10 @@ async function serveStatic(req, res, urlPath) {
   const root = ROOTS.find((r) => clean.startsWith(r.url));
   if (!root) return false;
   let rel = clean.slice(root.url.length);
+  if (rel === 'index' || rel === 'index.html') rel = 'index.html';
   if (rel === '' || rel.endsWith('/')) {
-    if (clean === '/' || clean === '/index.html') rel = 'index.html';
-    else if (clean === '/guide' || clean === '/guide/') rel = 'guide.html';
-    else if (clean === '/desk' || clean === '/desk/') rel = 'desk.html';
-    else if (clean === '/about' || clean === '/about/') rel = 'about.html';
+    // the app is a single page with hash routes; only the shell is served here
+    if (clean === '/' || clean === '/index.html' || clean === '/index') rel = 'index.html';
     else return false;
   }
   const target = path.join(root.dir, rel);
@@ -546,10 +545,15 @@ const server = http.createServer(async (req, res) => {
 
   if (await serveStatic(req, res, url.pathname)) return;
 
-  // final fallback for a couple of friendly URLs
-  const friendly = { '/guide': 'guide.html', '/desk': 'desk.html', '/about': 'about.html' }[url.pathname];
-  if (friendly) {
-    res.writeHead(302, { location: `/${friendly}` });
+  // friendly URLs point at the app's hash routes
+  const hashRoutes = ['start', 'desk', 'log', 'review', 'research', 'guide'];
+  const seg = url.pathname.replace(/^\/+|\/+$/g, '');
+  if (hashRoutes.includes(seg)) {
+    res.writeHead(302, { location: `/#/${seg}` });
+    return res.end();
+  }
+  if (seg === 'agents' || seg === 'rules' || seg === 'about') {
+    res.writeHead(302, { location: '/#/start' });
     return res.end();
   }
 
