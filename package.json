@@ -1,0 +1,18 @@
+{
+  "name": "six-agent-paper-desk",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A deterministic 6-agent crypto paper-trading desk. PAPER MODE ONLY - no wallets, no live orders, no real money.",
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node server.mjs",
+    "test": "node --test \"test/*.test.mjs\""
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "jsdom": "^30.1.2"
+  }
+}

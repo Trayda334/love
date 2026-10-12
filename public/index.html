@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Six-Agent Paper Trading Desk - PAPER MODE ONLY</title>
+<meta name="description" content="A deterministic six-agent crypto paper-trading desk: Scanner, Sizer, Buyer, Prediction-Market, Anti-FOMO and Logger. Paper mode only - no wallets, no live orders.">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📝</text></svg>">
+<script src="/vendor/chart.umd.min.js"></script>
+</head>
+<body>
+<header id="topbar">
+  <nav id="nav"></nav>
+</header>
+<div id="statusbar" class="statusbar"></div>
+<main id="view"><p class="muted" style="padding:2rem">Loading the paper desk…</p></main>
+<footer class="footer">
+  <p><strong>Paper mode only.</strong> This desk cannot connect a wallet, cannot hold exchange keys and contains no code that can send an order. All fills are simulated.</p>
+  <p class="muted small">Education and experimentation only - not financial advice. Crypto, meme coins and prediction markets are extremely risky. The viral "$89 → $55,698" claim that inspired this build is unverified and must not be treated as a realistic outcome. Never trade money you cannot afford to lose.</p>
+</footer>
+<div id="toasts"></div>
+<script type="module" src="/client/app.mjs"></script>
+</body>
+</html>
