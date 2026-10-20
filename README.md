@@ -264,3 +264,43 @@ are not established by the supplied reference. Leave those fields blank for API
 defaults. Live API behavior and the documentation index remain unverified because
 those hosts are outside this environment's network allowlist. No private account
 access, order mutation, automatic market selection or trading is added.
+
+### Opt-in server-only WebSocket helper
+
+`createUSStream` in `src/feeds/polymarket-us-stream.mjs` supports market events
+(`marketData`, `marketDataLite`, `trade`) or private events (`orderSnapshot`,
+`orderUpdate`, `positionSnapshot`, `positionUpdate`, `accountBalanceSnapshot`,
+`accountBalanceUpdate`). These are JavaScript SDK names, not Python's snake_case.
+Installed SDK 0.1.1 signs **both** WebSocket handshakes and requires server
+credentials even for market streams. No secrets or private streams are sent to
+browser code. The helper is not started automatically and has no HTTP/UI bridge.
+
+```js
+import { createUSStream } from './src/feeds/polymarket-us-stream.mjs';
+
+const stream = createUSStream({
+  marketSlugs: ['your-verified-market-slug'],
+  events: ['marketDataLite', 'trade'],
+  onData: async ({ event, data, receivedAt, generation }) => {
+    // Consume in trusted server code; do not log private payloads.
+    // Validate source timestamps and rebuild state after reconnects.
+  },
+  onStatus: ({ state, stale }) => {
+    // 'subscribed' confirms transport subscription, NOT fresh/complete data.
+  },
+});
+stream.start();
+// Call stream.stop() when finished, including during application shutdown.
+```
+
+Limits: ten explicit market slugs, unique request IDs, five reconnect attempts
+per start by default, exponential backoff from 1s capped at 30s, and a 10s
+connection timeout. Reconnects resubscribe; they do not guarantee replay or
+continuity. Status notifications conservatively retain `stale: true`; consumers
+must establish freshness and complete snapshots themselves. No heartbeat-liveness
+monitor or automatic REST reconciliation is provided. Messages are consumed
+serially with a 100-item pending limit; consumer failure/overflow stops the stream.
+Queued data from a closed connection is discarded. Payloads preserve decimal
+strings and are not written into the paper ledger. Live WebSocket connectivity
+is unverified under the network allowlist; lifecycle tests use fake sockets.
+The supplied documentation index remains inaccessible. No order actions are added.
