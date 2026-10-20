@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Polymarket Desk · Research & Manual Trading</title>
+<meta name="description" content="Research Polymarket YES/NO markets, record paper positions and track outcomes. Paper research plus an opt-in, protected manual live trading gateway.">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📝</text></svg>">
+<script src="/vendor/chart.umd.min.js"></script>
+</head>
+<body>
+<header id="topbar">
+  <nav id="nav"></nav>
+</header>
+<div id="statusbar" class="statusbar"></div>
+<main id="view"><p class="muted" style="padding:2rem">Loading the paper desk…</p></main>
+<footer class="footer">
+  <p><strong>Know your mode.</strong> Research, crypto tools and the paper ledger are simulated. The separate Real-money trading screen can submit actual orders only when a private deployment is explicitly enabled and authenticated. Its hard spending cap is $10 per order; no automatic trading.</p>
+  <p class="muted small">Education and experimentation only - not financial advice. Crypto, meme coins and prediction markets are extremely risky. The viral "$89 → $55,698" claim that inspired this build is unverified and must not be treated as a realistic outcome. Never trade money you cannot afford to lose.</p>
+</footer>
+<div id="toasts"></div>
+<script type="module" src="/client/app.mjs"></script>
+</body>
+</html>
