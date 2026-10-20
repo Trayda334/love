@@ -219,3 +219,22 @@ html, body {
   .toc ul { columns: 1; }
   .chart-wrap { height: 160px; }
 }
+
+/* Deliberately distinct from paper research: private manual execution. */
+.live-app { max-width: 1180px; margin: 0 auto; }
+.live-hero { padding: 1.4rem 0 .5rem; }
+.live-hero h1 { font-size: clamp(2rem, 5vw, 3.2rem); letter-spacing: -.045em; line-height: 1.1; margin: 1rem 0; }
+.live-hero p { max-width: 720px; line-height: 1.7; }
+.live-columns { display: grid; grid-template-columns: 1.15fr 1fr; gap: 1rem; align-items: start; }
+.live-message:not(:empty) { border: 1px solid #4a739e; background: #14243a; color: #d7eaff; padding: 1rem; border-radius: 12px; overflow-wrap: anywhere; }
+.live-message-danger { color: #ffb9b9; }
+.live-message.live-message-danger { background: #321923; border-color: #a14e60; }
+.live-preview { padding: 1.2rem; border: 1px solid #b9863e; border-radius: 12px; background: #201e20; }
+.live-detail { display: flex; flex-direction: column; gap: .25rem; padding: .65rem 0; overflow-wrap: anywhere; }
+.live-check { display: flex; gap: .75rem; align-items: flex-start; line-height: 1.6; }
+.live-check input { margin-top: .35rem; flex-shrink: 0; }
+.live-position { border-top: 1px solid #334058; padding: .5rem 0; }
+.live-json { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 18rem; overflow: auto; }
+.live-app .field { min-width: 0; }
+.live-app .btn { min-height: 44px; white-space: normal; }
+@media (max-width: 800px) { .live-columns { grid-template-columns: 1fr; } .live-app .grid-3 { grid-template-columns: 1fr; } }

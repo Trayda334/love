@@ -1,10 +1,7 @@
-/**
- * app.mjs - router and shared state for the six-agent paper desk.
- * PAPER MODE ONLY: the entire client can talk to exactly one server (this one),
- * and that server has no way to reach a real market.
- */
+/** Router for paper research and a separate, authenticated manual live ticket. */
 
 import { h, $, api, toast, fmtUsd, pill } from './util.mjs';
+import { renderLive } from './view-live.mjs';
 import { renderDesk } from './view-desk.mjs';
 import { renderLog } from './view-log.mjs';
 import { renderReview } from './view-review.mjs';
@@ -14,7 +11,7 @@ import { renderGuide } from './view-guide.mjs';
 
 export const app = {
   state: null,
-  route: 'research',
+  route: 'live',
   snapshot: null,
   snapshots: new Map(),
   plan: null,
@@ -35,7 +32,8 @@ export const app = {
 };
 
 const ROUTES = {
-  research: { label: 'Polymarket', render: renderResearch },
+  live: { label: 'Real-money trading', render: renderLive },
+  research: { label: 'Polymarket research', render: renderResearch },
   log: { label: 'Positions & results', render: renderLog },
   guide: { label: 'Setup guide', render: renderGuide },
   start: { label: 'Checks & settings', render: renderSetup },
@@ -61,6 +59,8 @@ export async function refresh({ keepScroll = false } = {}) {
   refreshing = true;
   try {
     const y = keepScroll ? window.scrollY : 0;
+    app.liveCleanup?.();
+    app.liveCleanup = null;
     const view = $('#view');
     const route = ROUTES[app.route] || ROUTES.desk;
     const ctx = context();
@@ -98,7 +98,7 @@ function context() {
 function renderNav() {
   const nav = $('#nav');
   nav.replaceChildren(
-    h('div', { class: 'brand' }, h('span', { class: 'brand-dot' }), h('strong', { text: 'Polymarket Paper Desk' })),
+    h('div', { class: 'brand' }, h('span', { class: 'brand-dot' }), h('strong', { text: 'Polymarket Desk' })),
     h('div', { class: 'navlinks' }, ...Object.entries(ROUTES).map(([id, r]) =>
       h('a', { class: `navlink ${app.route === id ? 'navlink-active' : ''}`, href: `#/${id}`, text: r.label }))),
   );
@@ -108,12 +108,16 @@ function renderStatusBar() {
   const bar = $('#statusbar');
   const s = app.state;
   if (!s) return;
+  if (app.route === 'live') {
+    bar.replaceChildren(pill('REAL-MONEY TICKET', 'warn'), pill('$10 per order · private sign-in required', 'accent'), h('span', { class: 'muted small', text: 'Paper balances and agents do not authorize live trades.' }));
+    return;
+  }
   bar.replaceChildren(
-    h('span', { class: 'paper-tag', text: 'PAPER MODE' }),
+    h('span', { class: 'paper-tag', text: app.route === 'live' ? 'REAL-MONEY TICKET · $10 CAP' : 'PAPER MODE' }),
     pill(`${fmtUsd(s.account.balance)} paper`, 'good'),
     pill(`${s.records.filter(r => r.kind === 'prediction' && r.status === 'OPEN_BET').length}/${s.config.prediction.maxOpenBets} paper bets open`, 'neutral'),
     pill(`${s.records.filter(r => r.kind === 'prediction' && r.status === 'RESOLVED').length} resolved`, 'neutral'),
-    pill('Read-only · no wallet', 'accent'),
+    pill(app.route === 'live' ? 'Private sign-in required · no auto-trading' : 'Paper research · no live execution', 'accent'),
     h('span', { class: 'spacer' }),
     h('button', { class: 'btn btn-mini', text: 'Refresh data', onclick: async () => { await reload(); await refresh({ keepScroll: true }); toast('State refreshed.', 'info'); } }),
   );
@@ -137,10 +141,10 @@ async function boot() {
   }
 
   const fromHash = routeFromHash();
-  app.route = fromHash || 'research';
+  app.route = fromHash || 'live';
 
   window.addEventListener('hashchange', async () => {
-    const r = routeFromHash() || 'research';
+    const r = routeFromHash() || 'live';
     if (r === app.route) return;
     app.route = r;
     await refresh();

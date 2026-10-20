@@ -4,7 +4,7 @@
  *
  * jsdom cannot execute `<script type="module">`, so the test wires the client
  * modules up itself against a jsdom document. Skipped when jsdom is absent,
- * because the app itself ships with zero dependencies:
+ * when only production dependencies are installed:
  *
  *   npm install --no-save jsdom && npm test
  */
@@ -47,7 +47,7 @@ test('the UI renders, navigates and trades in paper mode without an uncaught err
   const dataFile = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'desk-ui-')), 'desk.json');
   const child = spawn(process.execPath, ['server.mjs'], {
     cwd: root,
-    env: { ...process.env, PORT: String(PORT), DESK_DATA: dataFile },
+    env: { ...process.env, PORT: String(PORT), DESK_DATA: dataFile, LIVE_TRADING_ENABLED: 'false' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   const serverLog = [];
@@ -57,7 +57,7 @@ test('the UI renders, navigates and trades in paper mode without an uncaught err
   assert.ok(await waitForServer(), `server did not start: ${serverLog.join('')}`);
 
   const html = await (await fetch(`${BASE}/`)).text();
-  assert.match(html, /PAPER MODE|paper mode/i);
+  assert.match(html, /Research|research/);
 
   const dom = new JSDOM(html, { url: `${BASE}/`, pretendToBeVisual: true });
   const { window } = dom;
@@ -113,17 +113,14 @@ test('the UI renders, navigates and trades in paper mode without an uncaught err
 
   await import('../public/client/app.mjs');
 
-  /* 1. boot: nav, paper-mode status bar, onboarding checklist on an empty ledger */
+  /* 1. boot: live ticket is the default, locked without private deployment */
   await waitFor(() => window.document.querySelectorAll('.navlink').length >= 5, 'the navigation to render');
   const navText = window.document.querySelector('#nav').textContent;
   for (const label of ['Polymarket', 'Positions & results', 'Crypto tools', 'Crypto review', 'Checks & settings', 'Setup guide']) {
     assert.match(navText, new RegExp(label), `nav is missing "${label}"`);
   }
-  await waitFor(() => view().textContent.includes('Your Polymarket workflow'), 'the Polymarket home page');
+  await waitFor(() => view().textContent.includes('Live trading is locked'), 'the disabled live home page');
   const status = () => window.document.querySelector('#statusbar').textContent;
-  assert.match(status(), /PAPER MODE/);
-  assert.match(status(), /\$1,000/);
-  assert.match(view().textContent, /No wallet, no real orders/);
 
   const go = async (hash, expectText) => {
     window.location.hash = hash;
@@ -131,7 +128,15 @@ test('the UI renders, navigates and trades in paper mode without an uncaught err
     await waitFor(() => view().textContent.includes(expectText), `${hash} to render "${expectText}"`);
   };
 
-  /* 2. every route renders */
+  /* 2. every route renders; real trading stays locked in the shared preview */
+  await go('#/live', 'Live trading is locked');
+  assert.match(view().textContent, /\$10/);
+  assert.equal(view().querySelector('input[type=password]'), null, 'disabled gateway must not offer account login');
+  assert.match(status(), /REAL-MONEY TICKET/);
+  await go('#/research', 'Your Polymarket workflow');
+  assert.match(status(), /PAPER MODE/);
+  assert.match(status(), /\$1,000/);
+  assert.match(view().textContent, /No wallet, no real orders/);
   await go('#/desk', 'Step 1 - market data in');
   assert.match(view().textContent, /No wallet/);
   await go('#/log', 'Paper trades');
@@ -187,7 +192,7 @@ test('the UI renders, navigates and trades in paper mode without an uncaught err
   assert.ok(ticketId, 'the ledger shows the ticket id');
   assert.match(view().textContent, /OPEN/, 'the ticket is open');
   assert.match(status(), /0\/3 paper bets open/, 'crypto trades must not count as Polymarket positions');
-  assert.match(status(), /Read-only/, 'the status bar identifies read-only access');
+  assert.match(status(), /Paper research/, 'the status bar identifies read-only access');
 
   /* 7. close it at a loss, from the UI, and confirm the loss is kept */
   await go('#/desk', 'Step 1 - market data in');

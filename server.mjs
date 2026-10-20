@@ -1,11 +1,5 @@
-/**
- * server.mjs - the paper desk's local server.
- *
- * PAPER MODE ONLY. There is no broker/exchange client in this codebase, no
- * wallet code, no key handling and no order-placement endpoint. The only thing
- * that leaves this process is a public market-data GET request.
- *
- * Run: npm start   (http://0.0.0.0:8787)
+/** Paper research desk plus an explicitly enabled, separately authenticated
+ * manual live-order gateway. Live execution is disabled unless privately configured.
  */
 
 import http from 'node:http';
@@ -14,6 +8,7 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { createLiveHTTP } from './src/live/http.mjs';
 import { classifyUSError } from './src/feeds/polymarket-us-errors.mjs';
 import { createPublicUSResearch } from './src/feeds/polymarket-us.mjs';
 import { Store } from './src/core/store.mjs';
@@ -30,6 +25,7 @@ const PORT = Number(process.env.PORT || 8787);
 const HOST = process.env.HOST || '0.0.0.0';
 const DATA_FILE = process.env.DESK_DATA || path.join(__dirname, 'data', 'desk.json');
 
+const liveHTTP = createLiveHTTP({ root: __dirname });
 const publicUSResearch = createPublicUSResearch();
 const store = new Store(DATA_FILE);
 const provider = new MarketProvider(store, { ttlMs: 45000 });
@@ -251,7 +247,8 @@ const API = {
   },
   'GET /api/health': async () => ({
     ok: true,
-    paperOnly: true,
+    paperOnly: !liveHTTP.enabled,
+    manualLiveGateway: liveHTTP.enabled,
     notice: PAPER_ONLY_NOTICE,
     version: '1.0.0',
   }),
@@ -610,8 +607,20 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const route = `${req.method} ${url.pathname}`;
 
-  // Same-origin only. No CORS headers are sent, so a random page cannot
-  // drive the desk from another origin.
+  res.setHeader('referrer-policy', 'same-origin');
+  res.setHeader('x-content-type-options', 'nosniff');
+  if (liveHTTP.enabled) {
+    res.setHeader('content-security-policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'");
+    res.setHeader('x-frame-options', 'DENY');
+    res.setHeader('strict-transport-security', 'max-age=31536000');
+  }
+  if (url.pathname.startsWith('/api/live/')) {
+    const result = await liveHTTP.handle(req, url, readBody);
+    for (const [key, value] of Object.entries(result.headers || {})) res.setHeader(key, value);
+    return sendJson(res, result.status, result.payload);
+  }
+
+  // Paper/public API routes remain separate from authenticated live operations.
   if (route.startsWith('GET /api') || route.startsWith('POST /api')) {
     const handler = API[route];
     if (!handler) return fail(res, 404, `No API route ${route}.`);
@@ -637,7 +646,7 @@ const server = http.createServer(async (req, res) => {
   if (await serveStatic(req, res, url.pathname)) return;
 
   // friendly URLs point at the app's hash routes
-  const hashRoutes = ['start', 'desk', 'log', 'review', 'research', 'guide'];
+  const hashRoutes = ['start', 'desk', 'log', 'review', 'research', 'guide', 'live'];
   const seg = url.pathname.replace(/^\/+|\/+$/g, '');
   if (hashRoutes.includes(seg)) {
     res.writeHead(302, { location: `/#/${seg}` });
@@ -654,14 +663,18 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, HOST, () => {
   const rules = store.getConfig();
-  console.log(`\n  SIX-AGENT PAPER DESK  -  PAPER MODE ONLY`);
+  console.log(`\n  POLYMARKET DESK  -  paper research + opt-in live gateway`);
   console.log(`  http://${HOST}:${PORT}`);
   console.log(`  data file: ${DATA_FILE}`);
   console.log(`  rules: ${rules.risk.riskPctPerTrade}% max risk | 1 open position | stop required | data mode: ${store.getDataMode()}`);
-  console.log(`  no wallet, no keys, no live orders - by design.\n`);
+  console.log(`  live gateway: ${liveHTTP.enabled ? 'ENABLED — real money, authentication required' : 'DISABLED'}. Paper agents never place real orders.\n`);
 });
 
-process.on('SIGINT', () => {
-  console.log('\n  Shutting down. The ledger is already saved; nothing was ever sent to an exchange.');
+function shutdown() {
+  server.close();
+  liveHTTP.close();
+  console.log('\n  Shutting down. Reconcile any interrupted live submission before retrying.');
   process.exit(0);
-});
+}
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);

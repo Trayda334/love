@@ -14,8 +14,8 @@ export async function renderGuide(ctx) {
 
   wrap.append(
     h('div', { class: 'strip strip-paper' },
-      h('strong', { text: 'PAPER MODE ONLY. ' }),
-      h('span', { text: 'This guide is for testing whether a six-agent system can follow rules. It is not financial advice, and the "$89 to $55,698" claim that inspired it is unverified.' }),
+      h('strong', { text: 'PAPER RESEARCH GUIDE. ' }),
+      h('span', { text: 'This guide applies to simulated research, not the separate manual live ticket. It is not financial advice, and the "$89 to $55,698" claim that inspired it is unverified.' }),
     ),
   );
 

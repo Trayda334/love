@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "A deterministic 6-agent crypto paper-trading desk. PAPER MODE ONLY - no wallets, no live orders, no real money.",
+  "description": "Polymarket research and paper tracking with a disabled-by-default, authenticated manual live-order gateway.",
   "scripts": {
     "start": "node server.mjs",
     "dev": "node server.mjs",

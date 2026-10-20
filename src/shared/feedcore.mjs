@@ -313,4 +313,4 @@ export function categoryForBlock({ scanner, antiFomo, sizer, buyer }) {
 }
 
 export const PAPER_ONLY_NOTICE =
-  'PAPER MODE ONLY. This desk never connects a wallet, never signs anything and never sends a live order. All fills are simulated.';
+  'PAPER MODE ONLY. This research workflow never sends a live order. Its fills are simulated. The separate authenticated live gateway is not used by paper agents.';

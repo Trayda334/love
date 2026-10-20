@@ -1,3 +1,5 @@
+> **Scope:** This guide covers the simulated research agents only. The separate opt-in manual live gateway is documented in [LIVE_TRADING.md](/docs/LIVE_TRADING.md); paper rules do not authorize real orders.
+
 # 6 AI Bot Trading Team: Setup Guide (Paper Mode)
 
 **A beginner-friendly 6-agent trading experiment — PAPER MODE ONLY**
@@ -163,7 +165,7 @@ If any required approval is missing, respond: TRADE BLOCKED.
 Never suggest connecting a wallet or sending a live order.
 ```
 
-**What the code does.** The Buyer checks the three approvals and the one-position rule, then adds two guards of its own: it refuses to fill if the live price has already run above your planned entry area (that would be a chase), and it refuses if price has already broken through the invalidation level. Otherwise it writes a paper ticket with a signed-off maximum dollar risk. There is no broker client, no API key field and no order endpoint anywhere in this codebase — a live order is not something the app is *prevented* from doing, it is something it cannot do.
+**What the code does.** The Buyer checks the three approvals and the one-position rule, then adds two guards of its own: it refuses to fill if the live price has already run above your planned entry area (that would be a chase), and it refuses if price has already broken through the invalidation level. Otherwise it writes a paper ticket with a signed-off maximum dollar risk. This Buyer agent has no connection to the separate manual live gateway and cannot place real orders. Live execution requires its own private deployment, sign-in and confirmation.
 
 ---
 

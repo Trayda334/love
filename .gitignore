@@ -4,3 +4,7 @@ data/*.json.tmp
 *.log
 .DS_Store
 .env
+
+.env.*
+!.env.example
+data/live-*

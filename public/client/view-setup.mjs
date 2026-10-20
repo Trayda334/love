@@ -51,7 +51,7 @@ function startTab(ctx) {
         : hasLoss ? 'Both wins and losses are on the ledger. That is the only way this experiment means anything.'
           : 'Only wins so far. Keep your eyes open: if a losing paper trade is missed, the data becomes worthless - and the app cannot detect a trade you never logged.',
     },
-    { done: true, label: 'Real-money trading disabled', note: 'There is no wallet code, no API-key field and no order endpoint anywhere in this build. That is structural, not a setting.' },
+    { done: true, label: 'Paper agents isolated from live execution', note: 'These research agents and the paper ledger never place real orders. The separate live ticket is disabled by default and requires private HTTPS deployment, sign-in, preview and explicit confirmation.' },
     { done: s.counts.closedTrades >= 50, label: 'Ready to collect at least 50–100 paper trades', note: `${s.counts.closedTrades} closed so far. The guide says judge nothing before a full sample.`, progress: Math.min(100, (s.counts.closedTrades / 100) * 100) },
   ];
 

@@ -1,20 +1,37 @@
-# Polymarket Paper Desk
+# Polymarket Desk
 
-Polymarket-first, **paper-only** research and position tracking. Run `npm start` and open the home page to load public markets, inspect YES probabilities, and record your evidence and estimated probability range. The deterministic research checker logs a simulated YES / NO position or SKIP. It is not an AI probability forecaster.
+Polymarket research and paper tracking, plus a separate opt-in **manual real-money order ticket**. Run `npm start` and open **Polymarket research** to load public markets, inspect YES probabilities, and record your evidence and estimated probability range. The deterministic research checker logs a simulated YES / NO position or SKIP. It is not an AI probability forecaster.
 
 **Positions & results** opens the prediction ledger by default. Review open bets and manually record verified YES/NO settlement. The status bar tracks prediction positions; the home page shows resolved P&L and skips. Market-question filtering applies to the loaded market list only.
 
 NFL, tennis and BTC Up/Down research checklists are available on the home page. Use the manual worksheet for an exact contract link: enter an explicit YES proposition, verified quote and resolution time, and confirm the outcome mapping. Manual records are labelled USER-PROVIDED; no live scores, injury feed or automatic picks are supplied. Named-outcome API markets without an explicit YES label are not automatically mapped to a team.
 
-No wallet, keys, real orders, or automatic settlement. Each paper bet risks its entire stake (capped at 1%); crypto stop-loss rules do not apply to these bets. Public data availability depends on API/browser access. Quotes are snapshots, not guaranteed fills. Respect platform eligibility and local restrictions.
+The research workflow has no live execution or automatic settlement. Each paper bet risks its entire stake (capped at 1%); crypto stop-loss rules do not apply to these bets. Public data availability depends on API/browser access. Quotes are snapshots, not guaranteed fills. Respect platform eligibility and local restrictions.
 
 The original crypto tools and guide remain available as secondary tools; their review statistics are labelled **Crypto review** and are not prediction-market performance. Historical records are preserved.
+
+
+## Manual real-money app — disabled by default
+
+Open **Real-money trading** in the navigation. The shared preview is intentionally
+locked: no real credentials are configured and no live order is sent during testing.
+To deploy privately, follow **[docs/LIVE_TRADING.md](docs/LIVE_TRADING.md)**.
+
+The initial gateway supports BUY LONG limit IOC orders only, with a server-enforced
+**$10 modeled maximum spend per order including the reported fee reserve**.
+Private sessions, exact host/origin checks, CSRF, short-lived previews, fresh
+revalidation, and durable dispatch journaling protect the submission path.
+Missing fees, unverified identities and ambiguous submissions fail closed.
+There is no automated trading, sell/short/modify/cancel/close workflow, daily loss
+cap, or guarantee against an exchange reporting incorrect fees. Multiple orders
+can lose more than $10. Live API shapes/behavior remain **unverified** in this
+network environment; this is an integration prototype, not a production certification.
 
 ---
 
 # Six-Agent Paper Trading Desk
 
-A local, dependency-free implementation of the **6 AI Bot Trading Team** setup — the Scanner / Sizer / Buyer / Prediction-Market / Anti-FOMO / Logger idea — built to be run in **PAPER MODE ONLY**.
+A local implementation of the **6 AI Bot Trading Team** setup — the Scanner / Sizer / Buyer / Prediction-Market / Anti-FOMO / Logger idea — built to be run in **PAPER MODE ONLY**.
 
 It is not a bot that trades. It is a **desk that refuses to trade badly**, records everything honestly, and tells you when it cannot know something.
 
@@ -23,7 +40,7 @@ npm start          # → http://localhost:8787
 npm test           # unit tests for the rules and the market math
 ```
 
-Node 20+ and nothing else. No npm dependencies to install.
+Node 20+. Run `npm ci` before starting; the Polymarket US SDK is a runtime dependency.
 
 ---
 
@@ -55,7 +72,7 @@ Order of operations is the guide's order: **Scanner → Anti-FOMO → Sizer → 
 
 Enforced in `src/config.mjs` and checked again in `src/agents/*`:
 
-- **Paper mode only.** There is no wallet code, no key handling, no broker client and no order endpoint in this repository. A live order is not disabled — it is impossible to express.
+- **Paper agents only.** These rules apply to simulated agents and the paper ledger. They cannot invoke the separate manual live gateway. That gateway has its own sign-in, $10 spending cap and preview/confirmation requirements.
 - **Risk per trade can never exceed 1%** of the paper account. You may lower it; raising it is rejected with an explanation.
 - **Every ticket requires a stop-loss**, and the Sizer rejects stops that are too tight (inside normal noise) or too wide (not a real invalidation).
 - **One open position at a time.**
@@ -110,8 +127,8 @@ Rule changes are permitted and audited. Nothing is hidden: if you loosen a thres
 ## Testing
 
 ```bash
-npm test                                  # 52 tests, no dependencies to install
-npm install --no-save jsdom && npm test    # + the browser UI smoke test (53)
+npm ci
+npm test                                  # includes SDK mocks, security checks and UI tests
 ```
 
 Covers the market math (moves, ATR, base detection, in-progress candle handling), the rules (1% ceiling, stop-distance bands, reward/risk, one-position rule, no-risk-increase-after-a-loss), the Anti-FOMO thresholds, the Buyer's chase guard, the Logger's P&L accounting and review maths, the sources' payload parsing, and an end-to-end pipeline run against an in-memory ledger. See `docs/TESTING.md` for the manual test plan.
@@ -132,7 +149,7 @@ inject variables through your host's secret settings or use Node's
 
 This helper is not yet wired into the app's market feed or any HTTP route.
 The app still uses the existing public market feed and paper ledger. Installing
-and initializing the SDK does not enable real trading. Do not expose its order
+and initializing the SDK alone does not enable real trading. Do not expose its order
 methods through the paper desk.
 
 ### Public US market explorer
@@ -156,14 +173,14 @@ with timestamps; these reads are not atomic and do not promise exhaustive pagina
 It does not place/cancel orders, log account data or write it into the paper ledger.
 There is deliberately no HTTP route or public UI for this private snapshot: the
 shared preview has no account authentication/access-control layer. Only use the
-helper in trusted server code. Real order submission remains unimplemented.
+helper in trusted server code. Real order submission is available only through the separately configured manual live gateway; see `docs/LIVE_TRADING.md`.
 
 US SDK failures are classified as authentication, invalid request, not found,
 rate limit, or unavailable. Public explorer routes return fixed safe messages and
 error codes; private snapshot errors carry the same classification without raw
 SDK messages or account payloads. Upstream authentication failures use HTTP 502
 (they are not authentication challenges for the preview visitor). No automatic
-retry is performed, including on rate limits. No order submission was added.
+retry is performed, including on rate limits. This error handler does not submit orders; the separately enabled live gateway is described above.
 
 The US event explorer now supports limit/offset, category and series filters,
 and active/closed/archived/featured/live/ended selectors. Event lookup uses
@@ -303,4 +320,4 @@ serially with a 100-item pending limit; consumer failure/overflow stops the stre
 Queued data from a closed connection is discarded. Payloads preserve decimal
 strings and are not written into the paper ledger. Live WebSocket connectivity
 is unverified under the network allowlist; lifecycle tests use fake sockets.
-The supplied documentation index remains inaccessible. No order actions are added.
+The supplied documentation index remains inaccessible. This stream helper does not perform order actions.

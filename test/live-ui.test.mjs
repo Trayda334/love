@@ -1,0 +1,61 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { setTimeout as wait } from 'node:timers/promises';
+let JSDOM;
+try { ({ JSDOM } = await import('jsdom')); } catch {}
+
+// All calls mocked. This test can never reach a Polymarket endpoint.
+test('manual live ticket signs in, previews, requires exact confirmation and submits once', { skip: !JSDOM }, async t => {
+  const dom = new JSDOM('<main></main>', { url: 'https://private.example.test/#/live' });
+  const originals = { window: globalThis.window, document: globalThis.document, Node: globalThis.Node, fetch: globalThis.fetch };
+  globalThis.window = dom.window;
+  globalThis.document = dom.window.document;
+  globalThis.Node = dom.window.Node;
+  const calls = [], ctx = { app: {} };
+  t.after(() => { ctx.app.liveCleanup?.(); dom.window.close(); Object.assign(globalThis, originals); });
+  const draft = { id: 'test-operation', request: { marketSlug: 'test-market', quantity: 10, price: { value: '0.55', currency: 'USD' } }, market: { slug: 'test-market', title: 'Verified test contract', outcome: 'Test outcome', description: 'Example verified rules' }, notionalCents: 550, feeReserveCents: 6, totalCents: 556, expiresAt: Date.now() + 60000, confirmation: 'BUY 10 LONG test-market' };
+  globalThis.fetch = async (url, options) => {
+    const body = options.body ? JSON.parse(options.body) : undefined;
+    calls.push({ url, body, headers: options.headers });
+    let data;
+    if (url.endsWith('/status')) data = { enabled: true, authenticated: false };
+    else if (url.endsWith('/login')) data = { authenticated: true, csrf: 'test-csrf', expiresAt: Date.now() + 15 * 60000 };
+    else if (url.endsWith('/preview')) data = { preview: draft };
+    else if (url.endsWith('/submit')) data = { operation: { orderId: 'mock-order-id', message: 'Not a fill confirmation.' } };
+    else throw new Error(`Unexpected network request ${url}`);
+    return { ok: true, status: 200, json: async () => ({ ok: true, ...data }) };
+  };
+  const { renderLive } = await import('../public/client/view-live.mjs');
+  const root = await renderLive(ctx); document.querySelector('main').append(root);
+  const until = async fn => { for (let i = 0; i < 100; i++) { if (fn()) return; await wait(5); } assert.fail('UI did not reach expected state'); };
+  const submit = form => form.dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
+  const password = root.querySelector('input[type=password]'); password.value = 'test-private-password-not-api-key';
+  submit(password.closest('form'));
+  await until(() => root.textContent.includes('Manual order ticket'));
+  assert.equal(password.value, '', 'password is cleared immediately');
+  assert.equal(calls.filter(c => c.url.endsWith('/account')).length, 0, 'private account is not fetched automatically');
+  const ticket = [...root.querySelectorAll('form')].find(form => form.textContent.includes('US market slug'));
+  const [slug, price, quantity] = ticket.querySelectorAll('input');
+  slug.value = 'test-market'; price.value = '0.55'; quantity.value = '10';
+  submit(ticket);
+  await until(() => root.textContent.includes('Review before real submission'));
+  assert.equal(calls.filter(c => c.url.endsWith('/submit')).length, 0);
+  const finalForm = root.querySelector('.live-preview form');
+  const checkbox = finalForm.querySelector('input[type=checkbox]');
+  const confirmation = finalForm.querySelector('input:not([type=checkbox])');
+  const send = finalForm.querySelector('button');
+  assert.equal(send.disabled, true);
+  checkbox.checked = true; checkbox.dispatchEvent(new dom.window.Event('change'));
+  confirmation.value = 'wrong'; confirmation.dispatchEvent(new dom.window.Event('input'));
+  assert.equal(send.disabled, true);
+  confirmation.value = draft.confirmation; confirmation.dispatchEvent(new dom.window.Event('input'));
+  assert.equal(send.disabled, false);
+  submit(finalForm); submit(finalForm);
+  await until(() => root.textContent.includes('mock-order-id'));
+  const submitted = calls.filter(c => c.url.endsWith('/submit'));
+  assert.equal(submitted.length, 1);
+  assert.deepEqual(submitted[0].body, { previewId: draft.id, confirmation: draft.confirmation, acknowledged: true });
+  assert.equal(submitted[0].headers['x-csrf-token'], 'test-csrf');
+  ctx.app.liveCleanup();
+  assert.doesNotMatch(root.textContent, /mock-order-id/, 'account/ticket data cleared when leaving route');
+});

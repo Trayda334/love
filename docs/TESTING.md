@@ -3,11 +3,11 @@
 Two layers: an automated suite you can run in a few seconds, and a manual plan that checks the things code cannot (whether *you* are following the rules).
 
 ```bash
-npm test                                  # 52 automated tests
-npm install --no-save jsdom && npm test   # adds the browser UI smoke test
+npm ci
+npm test                                  # includes jsdom UI tests
 ```
 
-The app itself has **zero runtime dependencies** — the root `package.json` lists no `dependencies`, and the only devDependency is `jsdom`, used solely by the UI smoke test, which skips itself if jsdom is not installed.
+The app uses `polymarket-us` at runtime and `jsdom` for UI tests. SDK/live trading tests use mocked clients only. The paper smoke server explicitly disables live trading even if the parent environment contains live settings. No automated test accesses a real account or submits a real order.
 
 ## What the automated tests cover
 
@@ -91,3 +91,17 @@ The automated tests prove the *rules* behave. They cannot prove you will follow 
 - A mistake tally that names your own behaviour, not just the bot's.
 - Blocked setups reviewed honestly: some marked "would have won" (the agent is not omniscient) and some "would have lost".
 - A result you would be comfortable showing someone else in full — including the losers.
+
+
+## Manual live-order gateway coverage
+
+See `docs/LIVE_TRADING.md` for deployment, scope, limitations and recovery.
+`live-trading.test.mjs` verifies decimal cap/fee arithmetic, exact preview echo,
+server-side owner/expiry/confirmation checks, fresh revalidation, once-only
+submission, durable dispatch-before-create, failure/unknown-state blocking and
+restart recovery. `live-http.test.mjs` checks disabled defaults, session cookies,
+host/origin restrictions, CSRF, logout/expiry, login rate limiting and recovery.
+`live-ui.test.mjs` runs a completely mocked private login, preview and exact-phrase
+confirmation flow. The normal UI smoke test checks the disabled live screen.
+These passing tests are not live integration certification; the SDK response shapes
+and IOC/fee semantics must be verified privately without automatic test trades.
